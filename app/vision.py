@@ -1,12 +1,10 @@
 import io
 
 import ollama
-import logging
-import os
-import time
 
 from PIL import Image
-from config import logger, MODEL_VISION
+from app.config import logger, MODEL_VISION
+
 
 def resize_image(image_path):
     img = Image.open(image_path)
@@ -19,17 +17,12 @@ def resize_image(image_path):
     return temp_buffer.getvalue()
 
 
-def process_image(image_path):
-    if not os.path.exists(image_path):
-        logging.error(f"Файл не найден: {image_path}")
-        return None
-
-    logging.info(f"Обработка {os.path.basename(image_path)}...")
-    start_time = time.time()
+async def process_image(image_path):
+    client = ollama.AsyncClient()
 
     try:
         full_response = ""
-        for chunk in ollama.chat(
+        async for chunk in await client.chat(
                 model=MODEL_VISION,
                 messages=[
                     {
@@ -43,21 +36,15 @@ def process_image(image_path):
                     }
                 ],
                 stream=True,
-                options={
-                    'temperature': 0,
-                    'num_predict': 1000
-                }
+                options={'temperature': 0}
         ):
             full_response += chunk['message']['content']
 
-        content = full_response.strip()
-        if "</think>" in content:
-            content = content.split("</think>")[-1].strip()
+        if not full_response.strip():
+            logger.warning("Модель вернула пустой ответ!")
+            return "Текст не обнаружен."
 
-        duration = time.time() - start_time
-        logger.info(f"\nЗавершено за {duration:.2f} сек.")
-        return content
-
+        return full_response.strip()
     except Exception as e:
-        logger.critical(f"Ошибка: {e}")
+        logger.error(f"Ошибка в async OCR: {e}")
         return None

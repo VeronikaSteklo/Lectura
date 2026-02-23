@@ -1,10 +1,15 @@
 import logging
 import sys
+import os
 
 MODEL_VISION = 'qwen3-vl:8b'
-PHOTOS_DIR = 'photos'
-NOTES_DIR = 'notes'
-LOG_FILE = 'lectura_assistant.log'
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PHOTOS_DIR = os.path.join(BASE_DIR, 'photos')
+NOTES_DIR = os.path.join(BASE_DIR, 'notes')
+LOG_FILE = os.path.join(BASE_DIR, 'lectura_assistant.log')
+
+for directory in [PHOTOS_DIR, NOTES_DIR]:
+    os.makedirs(directory, exist_ok=True)
 
 logging.basicConfig(
     level=logging.INFO,
