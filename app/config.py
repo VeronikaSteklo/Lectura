@@ -2,7 +2,7 @@ import logging
 import sys
 import os
 
-MODEL_VISION = 'qwen3-vl:8b'
+MODEL_VISION = 'qwen3-vl:2b'
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PHOTOS_DIR = os.path.join(BASE_DIR, 'photos')
 NOTES_DIR = os.path.join(BASE_DIR, 'notes')

@@ -1,0 +1,119 @@
+body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.card {
+    border-radius: 15px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+    border: none;
+    backdrop-filter: blur(10px);
+    background: rgba(255,255,255,0.95);
+}
+
+.card-header {
+    border-radius: 15px 15px 0 0 !important;
+    border: none;
+}
+
+.upload-area {
+    border: 3px dashed #dee2e6;
+    border-radius: 10px;
+    padding: 40px;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    background-color: #f8f9fa;
+}
+
+.upload-area:hover {
+    border-color: #667eea;
+    background-color: #e3f2fd;
+    transform: translateY(-2px);
+}
+
+.upload-area.dragover {
+    border-color: #667eea;
+    background-color: #e3f2fd;
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+}
+
+.btn {
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.btn:disabled {
+    transform: none;
+    box-shadow: none;
+}
+
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
+/* Измененный фон результата - более теплый цвет */
+#resultContent {
+    max-height: 400px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+    line-height: 1.5;
+    background: linear-gradient(135deg, #f0f8ff 0%, #e6f3ff 100%) !important; /* Более светло-голубой градиент */
+    border-radius: 8px;
+    padding: 20px;
+    border: 1px solid #d1e7ff;
+}
+
+.alert {
+    border-radius: 8px;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease forwards;
+}
+
+#resultContent h1,
+#resultContent h2,
+#resultContent h3,
+#resultContent h4,
+#resultContent h5,
+#resultContent h6 {
+    color: #2c3e50;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+#resultContent p {
+    margin-bottom: 1rem;
+}
+
+#resultContent code {
+    background-color: #e3f2fd;
+    padding: 2px 4px;
+    border-radius: 4px;
+    font-size: 0.85em;
+}
+
+#resultContent pre {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 12px;
+    overflow-x: auto;
+}

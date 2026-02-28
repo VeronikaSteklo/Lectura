@@ -1,9 +1,11 @@
 import os
 import shutil
+
 from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.staticfiles import StaticFiles
+
+from app.config import NOTES_DIR
 from app.vision import process_image
-from app.config import logger, NOTES_DIR
-import uvicorn
 
 app = FastAPI(title="Lectura API")
 
@@ -35,3 +37,6 @@ async def ocr_endpoint(file: UploadFile = File(...)):
     finally:
         if os.path.exists(temp_path):
             os.remove(temp_path)
+
+
+app.mount("/", StaticFiles(directory="static", html=True), name="static")
