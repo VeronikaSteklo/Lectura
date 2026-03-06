@@ -3,7 +3,7 @@ import io
 import ollama
 
 from PIL import Image
-from app.config import logger, MODEL_VISION
+from app.config import logger, MODEL_VISION, SYSTEM_PROMPT
 
 
 def resize_image(image_path):
@@ -27,7 +27,7 @@ async def process_image(image_path):
                 messages=[
                     {
                         'role': 'system',
-                        'content': 'You are a fast OCR bot. Output ONLY text/tables from images in Markdown. No thinking, no chat.'
+                        'content': SYSTEM_PROMPT
                     },
                     {
                         'role': 'user',

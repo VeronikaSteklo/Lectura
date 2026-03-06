@@ -9,70 +9,118 @@
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-    <div class="container-fluid min-vh-100 d-flex align-items-center">
-        <div class="container">
-            <div class="row justify-content-center">
-                <div class="col-lg-8">
-                    <div class="card shadow-lg">
-                        <div class="card-header bg-primary text-white text-center">
-                            <h2><i class="fas fa-camera-retro"></i> Lectura Assistant</h2>
-                            <p class="mb-0">ИИ-агент для обработки лекций</p>
+<div class="container-fluid min-vh-100 d-flex align-items-center">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="card shadow-lg">
+                    <div class="card-header bg-primary text-white text-center">
+                        <h2><i class="fas fa-camera-retro"></i> Lectura Assistant</h2>
+                        <p class="mb-0">ИИ-агент для обработки лекций</p>
+                    </div>
+                    <div class="card-body">
+                        <!-- Форма загрузки -->
+                        <div id="uploadArea" class="upload-area mb-4">
+                            <i class="fas fa-cloud-upload-alt fa-3x mb-3 text-muted"></i>
+                            <h4>Перетащите фото сюда, кликните или вставьте (Ctrl+V)</h4>
+                            <p class="text-muted">Поддерживаются JPG, PNG</p>
+                            <input type="file" id="fileInput" accept=".jpg,.jpeg,.png" class="d-none">
+                            <button id="browseBtn" class="btn btn-outline-primary mt-2">
+                                <i class="fas fa-folder-open"></i> Выбрать файл
+                            </button>
+                            <div class="mt-3">
+                                <small class="text-muted">
+                                    <i class="fas fa-keyboard"></i> Подсказка: Сделайте скриншот и нажмите Ctrl+V
+                                </small>
+                            </div>
                         </div>
-                        <div class="card-body">
-                            <!-- Форма загрузки -->
-                            <div id="uploadArea" class="upload-area mb-4">
-                                <i class="fas fa-cloud-upload-alt fa-3x mb-3 text-muted"></i>
-                                <h4>Перетащите фото сюда, кликните или вставьте (Ctrl+V)</h4>
-                                <p class="text-muted">Поддерживаются JPG, PNG</p>
-                                <input type="file" id="fileInput" accept=".jpg,.jpeg,.png" class="d-none">
-                                <button id="browseBtn" class="btn btn-outline-primary mt-2">
-                                    <i class="fas fa-folder-open"></i> Выбрать файл
-                                </button>
-                                <div class="mt-3">
-                                    <small class="text-muted">
-                                        <i class="fas fa-keyboard"></i> Подсказка: Сделайте скриншот и нажмите Ctrl+V
-                                    </small>
-                                </div>
-                            </div>
 
-                            <!-- Кнопка обработки -->
-                            <div class="text-center mb-4">
-                                <button id="processBtn" class="btn btn-success btn-lg" disabled>
-                                    <i class="fas fa-cogs"></i> Обработать
-                                </button>
+                        <!-- Выбор действия -->
+                        <div class="mb-4">
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="actionType" id="onlyText" checked>
+                                <label class="form-check-label" for="newNote">
+                                    <i class="fas fa-plus-circle"></i> Только текст
+                                </label>
                             </div>
-
-                            <!-- Индикатор загрузки -->
-                            <div id="loadingIndicator" class="text-center mb-4 d-none">
-                                <div class="spinner-border text-primary" role="status">
-                                    <span class="visually-hidden">Обработка...</span>
-                                </div>
-                                <p class="mt-2">Обрабатываем ваше изображение...</p>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="actionType" id="newNote" value="new">
+                                <label class="form-check-label" for="newNote">
+                                    <i class="fas fa-plus-circle"></i> Создать новую заметку
+                                </label>
                             </div>
-
-                            <!-- Результат -->
-                            <div id="resultSection" class="d-none">
-                                <h5><i class="fas fa-file-alt"></i> Результат:</h5>
-                                <div id="resultContent" class="bg-light p-3 rounded"></div>
-                                <div class="mt-3">
-                                    <button id="copyBtn" class="btn btn-sm btn-outline-secondary">
-                                        <i class="fas fa-copy"></i> Копировать
-                                    </button>
-                                    <button id="downloadBtn" class="btn btn-sm btn-outline-primary ms-2">
-                                        <i class="fas fa-download"></i> Скачать .md
-                                    </button>
-                                </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="actionType" id="appendToExisting"
+                                       value="append">
+                                <label class="form-check-label" for="appendToExisting">
+                                    <i class="fas fa-file-import"></i> Добавить к существующей
+                                </label>
                             </div>
-
-                            <!-- Ошибки -->
-                            <div id="errorAlert" class="alert alert-danger d-none" role="alert"></div>
                         </div>
+
+                        <!-- Поля для нового файла -->
+                        <div id="newNoteFields" class="mb-4">
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-heading"></i></span>
+                                <input type="text" id="noteTitle" class="form-control"
+                                       placeholder="Название новой заметки">
+                            </div>
+                        </div>
+
+                        <!-- Выбор существующего файла -->
+                        <div id="existingNoteFields" class="mb-4 d-none">
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-file"></i></span>
+                                <select id="existingNoteSelect" class="form-select">
+                                    <option value="">Выберите заметку...</option>
+                                </select>
+                                <button id="refreshNotesBtn" class="btn btn-outline-secondary" type="button">
+                                    <i class="fas fa-sync"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Кнопка обработки -->
+                        <div class="text-center mb-4">
+                            <button id="processBtn" class="btn btn-success btn-lg" disabled>
+                                <i class="fas fa-cogs"></i> Обработать и сохранить
+                            </button>
+                        </div>
+
+                        <!-- Индикатор загрузки -->
+                        <div id="loadingIndicator" class="text-center mb-4 d-none">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Обработка...</span>
+                            </div>
+                            <p class="mt-2">Обрабатываем ваше изображение...</p>
+                        </div>
+
+                        <!-- Результат -->
+                        <div id="resultSection" class="d-none">
+                            <h5><i class="fas fa-file-alt"></i> Результат:</h5>
+                            <div id="resultContent" class="bg-light p-3 rounded"></div>
+                            <div class="mt-3">
+                                <button id="copyBtn" class="btn btn-sm btn-outline-secondary">
+                                    <i class="fas fa-copy"></i> Копировать
+                                </button>
+                                <button id="downloadBtn" class="btn btn-sm btn-outline-primary ms-2">
+                                    <i class="fas fa-download"></i> Скачать .md
+                                </button>
+                                <button id="viewAllBtn" class="btn btn-sm btn-outline-info ms-2">
+                                    <i class="fas fa-list"></i> Все заметки
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Ошибки -->
+                        <div id="errorAlert" class="alert alert-danger d-none" role="alert"></div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
-    <script src="/scripts/main.js"></script>
+<script src="/scripts/main.js"></script>
 </body>
 </html>

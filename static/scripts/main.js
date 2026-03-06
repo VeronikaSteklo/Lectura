@@ -3,6 +3,7 @@ class LecturaAssistant {
         this.initializeElements();
         this.bindEvents();
         this.currentFile = null;
+        this.loadNotesList();
     }
 
     initializeElements() {
@@ -16,7 +17,16 @@ class LecturaAssistant {
         this.errorAlert = document.getElementById('errorAlert');
         this.copyBtn = document.getElementById('copyBtn');
         this.downloadBtn = document.getElementById('downloadBtn');
-        this.pasteHint = document.getElementById('pasteHint');
+        this.viewAllBtn = document.getElementById('viewAllBtn');
+
+        this.newNoteRadio = document.getElementById('newNote');
+        this.appendToExistingRadio = document.getElementById('appendToExisting');
+        this.onlyTextRadio = document.getElementById('onlyText');
+        this.newNoteFields = document.getElementById('newNoteFields');
+        this.existingNoteFields = document.getElementById('existingNoteFields');
+        this.noteTitle = document.getElementById('noteTitle');
+        this.existingNoteSelect = document.getElementById('existingNoteSelect');
+        this.refreshNotesBtn = document.getElementById('refreshNotesBtn');
     }
 
     bindEvents() {
@@ -55,6 +65,18 @@ class LecturaAssistant {
             this.handlePaste(e);
         });
 
+        this.newNoteRadio.addEventListener('change', () => {
+            this.toggleActionFields();
+        });
+
+        this.appendToExistingRadio.addEventListener('change', () => {
+            this.toggleActionFields();
+        });
+
+        this.refreshNotesBtn.addEventListener('click', () => {
+            this.loadNotesList();
+        });
+
         this.processBtn.addEventListener('click', () => {
             this.processImage();
         });
@@ -66,6 +88,38 @@ class LecturaAssistant {
         this.downloadBtn.addEventListener('click', () => {
             this.downloadMarkdown();
         });
+
+        this.viewAllBtn.addEventListener('click', () => {
+            this.viewAllNotes();
+        });
+    }
+
+    toggleActionFields() {
+        if (this.newNoteRadio.checked) {
+            this.newNoteFields.classList.remove('d-none');
+            this.existingNoteFields.classList.add('d-none');
+        } else {
+            this.newNoteFields.classList.add('d-none');
+            this.existingNoteFields.classList.remove('d-none');
+        }
+    }
+
+    async loadNotesList() {
+        try {
+            const response = await fetch('/notes');
+            const data = await response.json();
+
+            this.existingNoteSelect.innerHTML = '<option value="">Выберите заметку...</option>';
+
+            data.notes.forEach(note => {
+                const option = document.createElement('option');
+                option.value = note.filename;
+                option.textContent = `${note.filename} (${note.modified})`;
+                this.existingNoteSelect.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Ошибка загрузки списка заметок:', error);
+        }
     }
 
     preventDefaults(e) {
@@ -127,24 +181,49 @@ class LecturaAssistant {
             return;
         }
 
+        let formData = new FormData();
+        formData.append('file', this.currentFile);
+        let endpoint = '/ocr';
+
+        if (this.newNoteRadio.checked) {
+            console.log("Выбрано: Создать новую заметку");
+            const title = this.noteTitle.value.trim();
+            if (!title) {
+                this.showError('Введите название новой заметки');
+                return;
+            }
+            endpoint = '/ocr/append';
+            formData.append('create_new', true);
+            formData.append('note_title', title);
+        } else {
+            const targetFile = this.existingNoteSelect.value;
+            if (!targetFile) {
+                this.showError('Выберите существующую заметку');
+                return;
+            }
+            endpoint = '/ocr/append';
+            formData.append('target_file', targetFile);
+            formData.append('create_new', false);
+
+        }
+
         this.hideError();
         this.showLoading();
         this.resultSection.classList.add('d-none');
 
-        const formData = new FormData();
-        formData.append('file', this.currentFile);
-
         try {
-            const response = await fetch('/ocr', {
-                method: 'POST',
-                body: formData
-            });
+            const response = await fetch(endpoint, {
+            method: 'POST',
+            body: formData
+        });
 
             const data = await response.json();
 
             if (response.ok) {
                 this.showResult(data.content);
                 this.resultData = data;
+                this.showSuccess(`Успешно ${data.action === 'created' ? 'создано' : 'добавлено'} в ${data.saved_to}`);
+                this.loadNotesList();
             } else {
                 this.showError(`Ошибка: ${data.detail || 'Неизвестная ошибка'}`);
             }
@@ -175,6 +254,15 @@ class LecturaAssistant {
     showError(message) {
         this.errorAlert.textContent = message;
         this.errorAlert.classList.remove('d-none');
+    }
+
+    showSuccess(message) {
+        this.errorAlert.textContent = message;
+        this.errorAlert.className = 'alert alert-success d-none';
+        this.errorAlert.classList.remove('d-none');
+        setTimeout(() => {
+            this.errorAlert.classList.add('d-none');
+        }, 3000);
     }
 
     hideError() {
@@ -208,6 +296,10 @@ class LecturaAssistant {
         URL.revokeObjectURL(url);
     }
 
+    viewAllNotes() {
+        window.open('/notes', '_blank');
+    }
+
     showNotification(message) {
         const notification = document.createElement('div');
         notification.className = 'alert alert-info alert-dismissible fade show position-fixed';
@@ -228,6 +320,5 @@ class LecturaAssistant {
 
 document.addEventListener('DOMContentLoaded', () => {
     window.lectura = new LecturaAssistant();
-
     console.log('💡 Подсказка: Вы можете вставить изображение из буфера обмена с помощью Ctrl+V');
 });
