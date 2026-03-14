@@ -1,10 +1,12 @@
 class LecturaAssistant {
     constructor() {
-        this.initializeElements();
-        this.bindEvents();
-        this.currentFile = null;
-        this.loadNotesList();
-    }
+    this.initializeElements();
+    this.bindEvents();
+    this.currentFile = null;
+    this.loadNotesList();
+
+    this.toggleActionFields();
+}
 
     initializeElements() {
         this.uploadArea = document.getElementById('uploadArea');
@@ -41,6 +43,10 @@ class LecturaAssistant {
 
         this.fileInput.addEventListener('change', (e) => {
             this.handleFileSelect(e.target.files[0]);
+        });
+
+        this.onlyTextRadio.addEventListener('change', () => {
+            this.toggleActionFields();
         });
 
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -95,12 +101,20 @@ class LecturaAssistant {
     }
 
     toggleActionFields() {
-        if (this.newNoteRadio.checked) {
+        this.newNoteFields.classList.add('d-none');
+        this.existingNoteFields.classList.add('d-none');
+        this.hideError();
+
+        if (this.onlyTextRadio.checked) {
+            this.processBtn.innerHTML = '<i class="fas fa-magic"></i> Просто распознать';
+        }
+        else if (this.newNoteRadio.checked) {
             this.newNoteFields.classList.remove('d-none');
-            this.existingNoteFields.classList.add('d-none');
-        } else {
-            this.newNoteFields.classList.add('d-none');
+            this.processBtn.innerHTML = '<i class="fas fa-save"></i> Обработать и сохранить';
+        }
+        else if (this.appendToExistingRadio.checked) {
             this.existingNoteFields.classList.remove('d-none');
+            this.processBtn.innerHTML = '<i class="fas fa-save"></i> Обработать и сохранить';
         }
     }
 
@@ -176,64 +190,72 @@ class LecturaAssistant {
     }
 
     async processImage() {
-        if (!this.currentFile) {
-            this.showError('Пожалуйста, выберите файл');
+    if (!this.currentFile) {
+        this.showError('Пожалуйста, выберите файл');
+        return;
+    }
+
+    let formData = new FormData();
+    formData.append('file', this.currentFile);
+
+    let endpoint = '/ocr';
+
+    if (this.onlyTextRadio.checked) {
+        endpoint = '/ocr';
+        formData.append('save', 'false');
+    }
+    else if (this.newNoteRadio.checked) {
+        const title = this.noteTitle.value.trim();
+        if (!title) {
+            this.showError('Введите название новой заметки');
             return;
         }
-
-        let formData = new FormData();
-        formData.append('file', this.currentFile);
-        let endpoint = '/ocr';
-
-        if (this.newNoteRadio.checked) {
-            console.log("Выбрано: Создать новую заметку");
-            const title = this.noteTitle.value.trim();
-            if (!title) {
-                this.showError('Введите название новой заметки');
-                return;
-            }
-            endpoint = '/ocr/append';
-            formData.append('create_new', true);
-            formData.append('note_title', title);
-        } else {
-            const targetFile = this.existingNoteSelect.value;
-            if (!targetFile) {
-                this.showError('Выберите существующую заметку');
-                return;
-            }
-            endpoint = '/ocr/append';
-            formData.append('target_file', targetFile);
-            formData.append('create_new', false);
-
+        endpoint = '/ocr/append';
+        formData.append('create_new', 'true');
+        formData.append('note_title', title);
+    }
+    else if (this.appendToExistingRadio.checked) {
+        const targetFile = this.existingNoteSelect.value;
+        if (!targetFile) {
+            this.showError('Выберите существующую заметку');
+            return;
         }
+        endpoint = '/ocr/append';
+        formData.append('target_file', targetFile);
+        formData.append('create_new', 'false');
+    }
 
-        this.hideError();
-        this.showLoading();
-        this.resultSection.classList.add('d-none');
+    this.hideError();
+    this.showLoading();
+    this.resultSection.classList.add('d-none');
 
-        try {
-            const response = await fetch(endpoint, {
+    try {
+        const response = await fetch(endpoint, {
             method: 'POST',
             body: formData
         });
 
-            const data = await response.json();
+        const data = await response.json();
 
-            if (response.ok) {
-                this.showResult(data.content);
-                this.resultData = data;
-                this.showSuccess(`Успешно ${data.action === 'created' ? 'создано' : 'добавлено'} в ${data.saved_to}`);
+        if (response.ok) {
+            this.showResult(data.content);
+            this.resultData = data;
+
+            if (data.saved_to) {
+                this.showSuccess(`Сохранено: ${data.saved_to}`);
                 this.loadNotesList();
             } else {
-                this.showError(`Ошибка: ${data.detail || 'Неизвестная ошибка'}`);
+                this.showNotification('Текст извлечен!');
             }
-        } catch (error) {
-            console.error('Ошибка:', error);
-            this.showError('Ошибка соединения с сервером');
-        } finally {
-            this.hideLoading();
+        } else {
+            this.showError(`Ошибка сервера: ${data.detail || 'Неизвестно'}`);
         }
+    } catch (error) {
+        this.showError('Ошибка сети или сервера');
+    } finally {
+        this.hideLoading();
     }
+}
 
     showLoading() {
         this.loadingIndicator.classList.remove('d-none');

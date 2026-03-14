@@ -1,6 +1,6 @@
 import os
 import shutil
-from datetime import datetime
+import tempfile
 from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from fastapi.staticfiles import StaticFiles
 from app.vision import process_image
@@ -11,24 +11,31 @@ app = FastAPI(title="Lectura API")
 
 
 @app.post("/ocr")
-async def ocr_endpoint(file: UploadFile = File(...)):
+async def ocr_endpoint(file: UploadFile = File(...), save: bool = Form(False)):
+    """Унифицированный эндпоинт для создания новой заметки через OCR"""
     if not file.filename.lower().endswith(('.jpg', '.jpeg', '.png')):
         raise HTTPException(status_code=400, detail="Поддерживаются только JPG и PNG")
 
-    temp_path = f"temp_{file.filename}"
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1])
+    temp_path = tmp.name
+
     try:
-        with open(temp_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+        shutil.copyfileobj(file.file, tmp)
+        tmp.close()
 
         text = await process_image(temp_path)
+
         if not text or not text.strip():
             text = "*OCR не обнаружил текст*"
 
-        note_filename = f"{os.path.splitext(file.filename)[0]}.md"
-        note_path = os.path.join(NOTES_DIR, note_filename)
-        with open(note_path, "w", encoding="utf-8") as f:
-            f.write(f"# {os.path.splitext(file.filename)[0]}\n\n")
-            f.write(text)
+        if not save:
+            return {"status": "success", "content": text, "saved_to": None}
+
+        title = os.path.splitext(file.filename)[0]
+        note_filename = notes_manager.create_new_note(title, text)
+
+        if not note_filename:
+            raise HTTPException(status_code=500, detail="Ошибка при создании заметки")
 
         return {
             "status": "success",
@@ -48,21 +55,20 @@ async def ocr_append_endpoint(
         note_title: str = Form("")
 ):
     """OCR + добавление в существующую заметку или создание новой"""
-    logger.info(f"Вызов ocr/append: create_new={create_new}, target_file={target_file}, note_title={note_title}")
     if not file.filename.lower().endswith(('.jpg', '.jpeg', '.png')):
         raise HTTPException(status_code=400, detail="Поддерживаются только JPG и PNG")
 
-    temp_path = f"temp_{file.filename}"
+    suffix = os.path.splitext(file.filename)[1]
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+    temp_path = tmp.name
+
     try:
-        with open(temp_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+        shutil.copyfileobj(file.file, tmp)
+        tmp.close()
 
         text = await process_image(temp_path)
         if not text or not text.strip():
             text = f"*OCR не обнаружил текст в файле {file.filename}*"
-
-        filename = ""
-        action = ""
 
         if create_new:
             title = note_title if note_title else os.path.splitext(file.filename)[0]
@@ -100,16 +106,21 @@ async def list_notes():
 async def get_note(filename: str):
     """Получить содержимое конкретной заметки"""
     content = notes_manager.read_note_content(filename)
-    if content == "" and not os.path.exists(
+    if not content and not os.path.exists(
             os.path.join(NOTES_DIR, filename if filename.endswith('.md') else filename + '.md')):
         raise HTTPException(status_code=404, detail="Заметка не найдена")
     return {"filename": filename, "content": content}
 
 
 @app.post("/notes/search")
-async def search_notes(query: str):
-    """Поиск по заметкам"""
-    return {"query": query, "message": "Поиск пока не реализован"}
+async def search_notes(query: str = Form(...)):
+    """Полнотекстовый поиск по всем заметкам"""
+    results = notes_manager.search_notes(query)
+    return {
+        "query": query,
+        "results": results,
+        "count": len(results)
+    }
 
 
 app.mount("/css", StaticFiles(directory=os.path.join(BASE_DIR, "static", "css")), name="css")
